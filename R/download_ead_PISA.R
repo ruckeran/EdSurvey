@@ -1,0 +1,221 @@
+# --------------------------------------------------------------------------------------------------
+# -------- Syntax for downloading and reading in OECD PISA data directly from their website --------
+# --------------------------------------------------------------------------------------------------
+
+# Packages needed ----------------------------------------------------------------------------------
+
+library(readr)
+library(eatGADS)
+library(devtools)
+devtools::load_all()
+
+# Downloading data with adjusted EdSurvey function -------------------------------------------------
+
+downloadPISA(root = "C:/Users/ruckeran/Downloads", years = c(2000, 2003, 2006, 2009, 2012), database = "INT")
+
+# Reading data one by one because didn't work in one line of code ---------------------------------
+
+# readPISA(path = c("C:/Users/ruckeran/Downloads/PISA/2000",
+#                   "C:/Users/ruckeran/Downloads/PISA/2003",
+#                   "C:/Users/ruckeran/Downloads/PISA/2006",
+#                   "C:/Users/ruckeran/Downloads/PISA/2009",
+#                   "C:/Users/ruckeran/Downloads/PISA/2012"), countries = "deu", cognitive = "score", forceReread = TRUE)
+
+years <- c("2000","2003","2006","2009","2012")
+base  <- "C:/Users/ruckeran/Downloads/PISA"
+
+# reading individually, using forceReread to ensure that everything is freshly read in
+pisa_list2 <- setNames(lapply(years, function(yr) {
+  cat("\n--- Reading PISA", yr, "---\n")
+  readPISA(path = file.path(base, yr),
+           countries = "deu",
+           cognitive = "score",
+           forceReread = TRUE)
+}), years)
+
+pisa_list <- pisa_list2 # for safety reasons :-)
+
+# # making it a combined object
+# pisa_combined <- edsurvey.data.frame.list(pisa_list)
+
+# Creating empty data set for all edsurvey.data.frames in pisa_list --------------------------------
+#
+# pisa_list <- lapply(pisa_list, function(edf) {
+#   edf$dataList <- lapply(edf$dataList, function(dl) {
+#     dl$data <- dl$data[numeric(), ]  # no rows, sampe caolumn structure
+#     dl
+#   })
+#   edf
+# })
+#
+# # little check
+# check_empty <- function(pisa_list) {
+#   sapply(names(pisa_list), function(yr) {
+#     nrow(pisa_list[[yr]]$dataList[[1]]$data)
+#   })
+# }
+# check_empty(pisa_list)
+
+####### PLAYGROUND FOLLOWING #######----------------------------------------------------------------
+
+## Turning data frames in GADSdats and empyting them ##
+
+# Parse "labelValues" strings like "1=Yes^2=No" into a data.frame
+parse_label_values <- function(s) {
+  if (is.null(s) || is.na(s) || s == "") {
+    return(data.frame(value = character(0), label = character(0), stringsAsFactors = FALSE))
+  }
+  parts <- unlist(strsplit(s, "\\^"))
+  kv <- strsplit(parts, "=", fixed = TRUE)
+  codes  <- vapply(kv, function(x) x[1], character(1))
+  labels <- vapply(kv, function(x) paste(x[-1], collapse = "="), character(1))
+  codes_num <- suppressWarnings(as.numeric(codes))
+  if (all(!is.na(codes_num))) codes <- codes_num
+  data.frame(value = codes, label = labels, stringsAsFactors = FALSE)
+}
+
+# Attach haven-style attributes (variable label + value labels) to df columns from fileFormat
+attach_haven_attrs <- function(df, ff) {
+  ff$variableName <- tolower(ff$variableName)
+  for (i in seq_len(nrow(ff))) {
+    var <- ff$variableName[i]
+    if (!var %in% names(df)) next
+    lab <- ff$Labels[i]
+    if (!is.null(lab) && !is.na(lab) && nzchar(lab)) {
+      attr(df[[var]], "label") <- lab
+    }
+    lv_df <- parse_label_values(ff$labelValues[i])
+    if (nrow(lv_df) > 0) {
+      lbl_vec <- lv_df$value
+      names(lbl_vec) <- lv_df$label
+      attr(df[[var]], "labels") <- lbl_vec
+    }
+  }
+  df
+}
+
+# Convert cached readPISA outputs into a GADSdat; optionally return it empty (0 rows)
+pisa_to_GADSdat <- function(year_dir, country = "deu", database = "INT", empty = TRUE) {
+  country <- toupper(country)
+
+  # 1) Locate the country data file written by readPISA (no header in file)
+  dat_file <- list.files(
+    year_dir,
+    pattern = paste0("^M_DAT_.*_", country, "\\.txt$"),
+    full.names = TRUE,
+    ignore.case = TRUE
+  )
+  if (length(dat_file) < 1) {
+    stop("No M_DAT file found in: ", year_dir, ". Did you run readPISA(forceReread=TRUE) for this year/country?")
+  }
+  if (length(dat_file) > 1) {
+    dat_file <- dat_file[which.max(file.mtime(dat_file))]
+  }
+
+  # 2) Locate a suitable meta RDS
+  meta_candidates <- list.files(
+    year_dir,
+    pattern = "\\.meta$",
+    full.names = TRUE,
+    ignore.case = TRUE
+  )
+  if (length(meta_candidates) < 1) {
+    stop("No .meta files found in: ", year_dir, ". Did readPISA complete successfully?")
+  }
+
+  # Priority 1: INT_all-countries.meta or FIN_all-countries.meta (2015/2018/2022)
+  priority_meta <- meta_candidates[basename(meta_candidates) == paste0(database, "_all-countries.meta")]
+  # Priority 2: any merged file-format meta M_FF_*.meta (covers 2000/2003/2006/2009/2012 and others)
+  merged_meta <- meta_candidates[grepl("^M_FF_.*\\.meta$", basename(meta_candidates), ignore.case = TRUE)]
+
+  meta_file <- character(0)
+  if (length(priority_meta) >= 1) {
+    meta_file <- priority_meta[which.max(file.mtime(priority_meta))]
+  } else if (length(merged_meta) >= 1) {
+    meta_file <- merged_meta[which.max(file.mtime(merged_meta))]
+  }
+
+  if (!length(meta_file)) {
+    stop("No suitable meta RDS found in: ", year_dir,
+         ". Expected either ", database, "_all-countries.meta (2015+) or a merged M_FF_*.meta (earlier years).")
+  }
+
+  meta <- readRDS(meta_file)
+  ff <- if (!is.null(meta$fileFormat)) meta$fileFormat else meta$dict
+  if (is.null(ff) || !all(c("variableName", "dataType") %in% names(ff))) {
+    stop("Meta RDS does not contain a valid fileFormat: ", meta_file)
+  }
+
+  # 3) Build names and column types from fileFormat
+  col_names <- tolower(ff$variableName)
+  to_coltype <- function(x) {
+    x <- tolower(x)
+    if (x %in% c("numeric", "integer", "double")) "d" else "c"
+  }
+  col_types_vec <- vapply(ff$dataType, to_coltype, character(1))
+  col_types <- paste(col_types_vec, collapse = "")
+
+  # 4) Read data (CSV has no header)
+  dat <- readr::read_csv(
+    dat_file,
+    col_names = col_names,
+    col_types = col_types,
+    na = character()
+  )
+
+  # 5) Attach labels and import to GADSdat
+  dat <- attach_haven_attrs(dat, ff)
+  g <- eatGADS::import_DF(dat)
+
+  # 6) Optionally empty the data (your standard approach)
+  if (isTRUE(empty)) {
+    g$dat <- g$dat[numeric(), ]
+  }
+
+  g
+}
+
+build_status <- list()
+gads_list <- setNames(lapply(years, function(yr) {
+  message("\n--- Building GADSdat (empty) for PISA ", yr, " ---")
+  tryCatch({
+    pisa_to_GADSdat(
+      year_dir = file.path(base, yr),
+      country  = "deu",
+      database = "INT"
+    )
+  }, error = function(e) {
+    build_status[[yr]] <<- conditionMessage(e)
+    NULL
+  })
+}), years)
+
+# Inspect build status (errors, if any)
+print(build_status)
+
+# Drop failed years (NULLs), keep only successful ones
+gads_list <- Filter(Negate(is.null), gads_list)
+
+# Quick checks
+print(names(gads_list))
+print(sapply(gads_list, function(g) inherits(g, "GADSdat")))
+print(t(sapply(gads_list, function(g) c(nrow = nrow(g$dat), ncol = ncol(g$dat)))))
+
+# Peek at metadata for one year (adjust year key if needed)
+if (length(gads_list)) {
+  print(head(gads_list[[names(gads_list)[1]]]$labels, 10))
+}
+
+# # Save for later reuse
+# if (length(gads_list)) {
+#   saveRDS(gads_list, file = "gads_list_PISA_INT_DEU.rds")
+# }
+
+# Save each GADSdat as a SPSS .sav file
+outdir <- "C:/Users/ruckeran/Downloads/PISA/SPSS_export/"
+dir.create(outdir, showWarnings = FALSE)
+lapply(names(gads_list), function(year) {
+  outfile <- file.path(outdir, paste0("PISA_", year, "_DEU.sav"))
+  eatGADS::write_spss(gads_list[[year]], filePath = outfile)
+  message("Exported: ", outfile)
+})
