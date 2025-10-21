@@ -47,10 +47,10 @@ downloadPISA <- function(root, years = c(2000, 2003, 2006, 2009, 2012, 2015, 201
     # if database is not specified, default to be INT because usually users do not want to download all databases
     database <- "INT"
   }
-  
+
   database <- toupper(database) # ensure no case issues
   database <- match.arg(database) # uses the choices from the formal args, no need to specify directly
-  
+
   for (y in years) {
     if (verbose) {
       cat(paste0("\nProcessing PISA data for year ", y, "\n"))
@@ -59,7 +59,7 @@ downloadPISA <- function(root, years = c(2000, 2003, 2006, 2009, 2012, 2015, 201
       warning(sQuote(y), " is not a valid year. PISA had data for the following year: ", paste0(validYears, sep = " "))
       next
     }
-    
+
     # Create a year root directory
     baseroot <- file.path(root, "PISA/")
     if (!dir.exists(baseroot)) {
@@ -69,7 +69,7 @@ downloadPISA <- function(root, years = c(2000, 2003, 2006, 2009, 2012, 2015, 201
     if (!dir.exists(yroot)) {
       dir.create(yroot)
     }
-    
+
     # Download all files
     for (d in database) {
       collected_files <- pisaURLDat(y, d)
@@ -107,7 +107,7 @@ downloadPISA <- function(root, years = c(2000, 2003, 2006, 2009, 2012, 2015, 201
           }
         }
       }
-      
+
       # Rename spss control files for PISA 2012 INT database (because OECD changed the file names and may change it again in the future)
       if (y == 2012 && d == "INT") {
         file_mappings <- list(
@@ -117,7 +117,7 @@ downloadPISA <- function(root, years = c(2000, 2003, 2006, 2009, 2012, 2015, 201
           "SPSS%20syntax%20to%20read%20in%20scored%20cognitive%20item%20response%20data%20file.txt" = "PISA2012_SPSS_scored_cognitive_item.txt",
           "SPSS%20syntax%20to%20read%20in%20student%20questionnaire%20data%20file.txt" = "PISA2012_SPSS_student.txt"
         )
-        
+
         for (old_name in names(file_mappings)) {
           old_path <- file.path(yroot, old_name)
           if (file.exists(old_path)) {
@@ -129,7 +129,7 @@ downloadPISA <- function(root, years = c(2000, 2003, 2006, 2009, 2012, 2015, 201
           }
         }
       }
-      
+
       # Unzipping files
       zFiles <- list.files(yroot, pattern = "\\.zip$", ignore.case = TRUE, full.names = FALSE)
       zFiles <- file.path(yroot, zFiles)
@@ -148,7 +148,7 @@ downloadPISA <- function(root, years = c(2000, 2003, 2006, 2009, 2012, 2015, 201
             if (verbose) {
               cat(paste0(" unzipping ", lst$Name[i], "\n"))
             }
-            
+
             tryCatch(unzip(z, files = lst$Name[i], exdir = yroot),
                      warning = function(w) {
                        if (w$message == "zip file is corrupt") {
@@ -158,7 +158,7 @@ downloadPISA <- function(root, years = c(2000, 2003, 2006, 2009, 2012, 2015, 201
                        }
                      }
             )
-            
+
             if (basename(lst$Name[i]) != lst$Name[i]) {
               file.rename(file.path(yroot, lst$Name[i]), file.path(yroot, basename(lst$Name[i])))
             }
