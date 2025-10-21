@@ -6,7 +6,7 @@
 #' @param root a character string indicating the directory where the PISA data should
 #'             be stored. Files are placed in a folder named PISA/[year].
 #' @param years an integer vector of the assessment years to download. Valid years are 2000, 2003,
-#'              2006, 2009, 2012, 2015, 2018, and 2022.
+#'              2006, 2009, 2012, 2015, and 2018.
 #' @param database a character vector to indicate which database to download from. For 2012,
 #'              three databases are available (\code{INT} = International, \code{CBA} = Computer-Based Assessment, and
 #'              \code{FIN} = Financial Literacy). For other years, only \code{INT} is available (for example, if PISA
@@ -38,10 +38,10 @@
 #' @example man/examples/downloadPISA.R
 #' @importFrom utils unzip
 #' @export
-downloadPISA <- function(root, years = c(2000, 2003, 2006, 2009, 2012, 2015, 2018, 2022), database = c("INT", "CBA", "FIN"), cache = FALSE, verbose = TRUE) {
+downloadPISA <- function(root, years = c(2000, 2003, 2006, 2009, 2012, 2015, 2018), database = c("INT", "CBA", "FIN"), cache = FALSE, verbose = TRUE) {
   fixTimeout()
   # valid years for PISA
-  validYears <- c(2000, 2003, 2006, 2009, 2012, 2015, 2018, 2022)
+  validYears <- c(2000, 2003, 2006, 2009, 2012, 2015, 2018)
   years <- as.numeric(years)
   if (missing(database)) {
     # if database is not specified, default to be INT because usually users do not want to download all databases
@@ -84,52 +84,17 @@ downloadPISA <- function(root, years = c(2000, 2003, 2006, 2009, 2012, 2015, 201
         fn <- basename(f)
         if (!file.exists(file.path(yroot, fn))) {
           # options(HTTPUserAgent="Mozilla/5.0 (Windows NT 6.1; WOW64; rv:53.0) Gecko/20100101 Firefox/53.0")
-          tryCatch({
-            if (grepl("http", f, ignore.case = TRUE)) {
-              download.file(f, file.path(yroot, fn), quiet = !verbose, mode = "wb")
-            } else {
-              download.file(paste0("http://www.oecd.org/", f), file.path(yroot, fn), quiet = !verbose, mode = "wb")
-            }
-          }, error = function(e) {
-            cat("Error: cannot download this file.\n")
-            cat("Sometimes downloads fails because the provider blocks connections from R itself but you can download them from a browser.\n")
-            cat("You can try to copy and paste these links into your browser and move them to your selected folder.\n\n")
-            cat("List of collected_files:\n")
-            # Print each URL on a separate line to avoid console print limit
-            for (url in collected_files) {
-              cat(url, "\n")
-            }
-            stop("Download failed.")
-          })
+          if (grepl("http", f, ignore.case = TRUE)) {
+            download.file(f, file.path(yroot, fn), quiet = !verbose, mode = "wb")
+          } else {
+            download.file(paste0("http://www.oecd.org/", f), file.path(yroot, fn), quiet = !verbose, mode = "wb")
+          }
         } else {
           if (verbose) {
             cat(paste0("Found downloaded ", y, " PISA (", d, " database) file ", fn, ".\n"))
           }
         }
       }
-
-      # Rename spss control files for PISA 2012 INT database (because OECD changed the file names and may change it again in the future)
-      if (y == 2012 && d == "INT") {
-        file_mappings <- list(
-          "SPSS%20syntax%20to%20read%20in%20cognitive%20item%20response%20data%20file.txt" = "PISA2012_SPSS_cognitive_item.txt",
-          "SPSS%20syntax%20to%20read%20in%20parent%20questionnaire%20data%20file.txt" = "PISA2012_SPSS_parent.txt",
-          "SPSS%20syntax%20to%20read%20in%20school%20questionnaire%20data%20file.txt" = "PISA2012_SPSS_school.txt",
-          "SPSS%20syntax%20to%20read%20in%20scored%20cognitive%20item%20response%20data%20file.txt" = "PISA2012_SPSS_scored_cognitive_item.txt",
-          "SPSS%20syntax%20to%20read%20in%20student%20questionnaire%20data%20file.txt" = "PISA2012_SPSS_student.txt"
-        )
-
-        for (old_name in names(file_mappings)) {
-          old_path <- file.path(yroot, old_name)
-          if (file.exists(old_path)) {
-            new_path <- file.path(yroot, file_mappings[[old_name]])
-            file.rename(old_path, new_path)
-            if (verbose) {
-              cat(paste0("Renamed ", old_name, " to ", file_mappings[[old_name]], "\n"))
-            }
-          }
-        }
-      }
-
       # Unzipping files
       zFiles <- list.files(yroot, pattern = "\\.zip$", ignore.case = TRUE, full.names = FALSE)
       zFiles <- file.path(yroot, zFiles)
@@ -176,16 +141,11 @@ downloadPISA <- function(root, years = c(2000, 2003, 2006, 2009, 2012, 2015, 201
 
 pisaURLDat <- function(year, database = "INT") {
   text <- "year	database	type	url
-2022	INT	data	https://webfs.oecd.org/pisa2022/STU_QQQ_SPSS.zip
-2022	INT	data	https://webfs.oecd.org/pisa2022/SCH_QQQ_SPSS.zip
-2022	INT	data	https://webfs.oecd.org/pisa2022/STU_COG_SPSS.zip
-2022	INT	data	https://webfs.oecd.org/pisa2022/STU_TIM_SPSS.zip
-2022	INT	data	https://webfs.oecd.org/pisa2022/FLT_SPSS.zip
 2018	INT	data	https://webfs.oecd.org/pisa2018/SPSS_STU_QQQ.zip
 2018	INT	data	https://webfs.oecd.org/pisa2018/SPSS_SCH_QQQ.zip
 2018	INT	data	https://webfs.oecd.org/pisa2018/SPSS_STU_COG.zip
 2018	INT	data	https://webfs.oecd.org/pisa2018/SPSS_STU_TIM.zip
-2018	INT	data	https://webfs.oecd.org/pisa2018/SPSS_STU_FLT.zip
+2018	FIN	data	https://webfs.oecd.org/pisa2018/SPSS_STU_FLT.zip
 2015	INT	data	https://webfs.oecd.org/pisa/PUF_SPSS_COMBINED_CMB_STU_QQQ.zip
 2015	INT	data	https://webfs.oecd.org/pisa/PUF_SPSS_COMBINED_CMB_SCH_QQQ.zip
 2015	INT	data	https://webfs.oecd.org/pisa/PUF_SPSS_COMBINED_CMB_STU_COG.zip
@@ -202,26 +162,26 @@ pisaURLDat <- function(year, database = "INT") {
 2012	INT	spss	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/main-survey/sas-and-spss-control-files/SPSS%20syntax%20to%20read%20in%20parent%20questionnaire%20data%20file.txt
 2012	INT	spss	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/main-survey/sas-and-spss-control-files/SPSS%20syntax%20to%20read%20in%20cognitive%20item%20response%20data%20file.txt
 2012	INT	spss	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/main-survey/sas-and-spss-control-files/SPSS%20syntax%20to%20read%20in%20scored%20cognitive%20item%20response%20data%20file.txt
-2012	CBA	data	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/cba-pisa-2012/data-sets-in-txt-format/CBA_STU12_MAR31.zip
-2012	CBA	data	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/cba-pisa-2012/data-sets-in-txt-format/CBA_SCQ12_MAR31.zip
-2012	CBA	data	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/cba-pisa-2012/data-sets-in-txt-format/CBA_PAQ12_MAR31.zip
-2012	CBA	data	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/cba-pisa-2012/data-sets-in-txt-format/CBA_COG12_MAR31.zip
-2012	CBA	data	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/cba-pisa-2012/data-sets-in-txt-format/CBA_COG12_S_MAR31.zip
-2012	CBA	spss	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/cba-pisa-2012/sas-and-spss-control-files/PISA2012_SPSS_CBA_student.txt
-2012	CBA	spss	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/cba-pisa-2012/sas-and-spss-control-files/PISA2012_SPSS_CBA_school.txt
-2012	CBA	spss	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/cba-pisa-2012/sas-and-spss-control-files/PISA2012_SPSS_CBA_parent.txt
-2012	CBA	spss	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/cba-pisa-2012/sas-and-spss-control-files/PISA2012_SPSS_CBA_cognitive_item.txt
-2012	CBA	spss	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/cba-pisa-2012/sas-and-spss-control-files/PISA2012_SPSS_CBA_scored_cognitive_item.txt
-2012	FIN	data	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/financial-literacy-pisa-2012/data-sets-in-txt-format/FIN_STU12_MAR31.zip
-2012	FIN	data	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/financial-literacy-pisa-2012/data-sets-in-txt-format/FIN_SCQ12_MAR31.zip
-2012	FIN	data	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/financial-literacy-pisa-2012/data-sets-in-txt-format/FIN_PAQ12_MAR31.zip
-2012	FIN	data	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/financial-literacy-pisa-2012/data-sets-in-txt-format/FIN_COG12_MAR31.zip
-2012	FIN	data	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/financial-literacy-pisa-2012/data-sets-in-txt-format/FIN_COG12_S_MAR31.zip
-2012	FIN	spss	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/financial-literacy-pisa-2012/sas-and-spss-control-files/PISA2012_SPSS_FIN_student.txt
-2012	FIN	spss	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/financial-literacy-pisa-2012/sas-and-spss-control-files/PISA2012_SPSS_FIN_school.txt
-2012	FIN	spss	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/financial-literacy-pisa-2012/sas-and-spss-control-files/PISA2012_SPSS_FIN_parent.txt
-2012	FIN	spss	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/financial-literacy-pisa-2012/sas-and-spss-control-files/PISA2012_SPSS_FIN_cognitive_item.txt
-2012	FIN	spss	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2012-datasets/financial-literacy-pisa-2012/sas-and-spss-control-files/PISA2012_SPSS_FIN_scored_cognitive_item.txt
+2012	CBA	data	http://www.oecd.org/pisa/pisaproducts/CBA_STU12_MAR31.zip
+2012	CBA	data	http://www.oecd.org/pisa/pisaproducts/CBA_SCQ12_MAR31.zip
+2012	CBA	data	http://www.oecd.org/pisa/pisaproducts/CBA_PAQ12_MAR31.zip
+2012	CBA	data	http://www.oecd.org/pisa/pisaproducts/CBA_COG12_MAR31.zip
+2012	CBA	data	http://www.oecd.org/pisa/pisaproducts/CBA_COG12_S_MAR31.zip
+2012	CBA	spss	http://www.oecd.org/pisa/pisaproducts/PISA2012_SPSS_CBA_student.txt
+2012	CBA	spss	http://www.oecd.org/pisa/pisaproducts/PISA2012_SPSS_CBA_school.txt
+2012	CBA	spss	http://www.oecd.org/pisa/pisaproducts/PISA2012_SPSS_CBA_parent.txt
+2012	CBA	spss	http://www.oecd.org/pisa/pisaproducts/PISA2012_SPSS_CBA_cognitive_item.txt
+2012	CBA	spss	http://www.oecd.org/pisa/pisaproducts/PISA2012_SPSS_CBA_scored_cognitive_item.txt
+2012	FIN	data	http://www.oecd.org/pisa/pisaproducts/FIN_STU12_MAR31.zip
+2012	FIN	data	http://www.oecd.org/pisa/pisaproducts/FIN_SCQ12_MAR31.zip
+2012	FIN	data	http://www.oecd.org/pisa/pisaproducts/FIN_PAQ12_MAR31.zip
+2012	FIN	data	http://www.oecd.org/pisa/pisaproducts/FIN_COG12_MAR31.zip
+2012	FIN	data	http://www.oecd.org/pisa/pisaproducts/FIN_COG12_S_MAR31.zip
+2012	FIN	spss	http://www.oecd.org/pisa/pisaproducts/PISA2012_SPSS_FIN_student.txt
+2012	FIN	spss	http://www.oecd.org/pisa/pisaproducts/PISA2012_SPSS_FIN_school.txt
+2012	FIN	spss	http://www.oecd.org/pisa/pisaproducts/PISA2012_SPSS_FIN_parent.txt
+2012	FIN	spss	http://www.oecd.org/pisa/pisaproducts/PISA2012_SPSS_FIN_cognitive_item.txt
+2012	FIN	spss	http://www.oecd.org/pisa/pisaproducts/PISA2012_SPSS_FIN_scored_cognitive_item.txt
 2009	INT	data	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2009-datasets/data-sets-in-txt-format/INT_STQ09_DEC11.zip
 2009	INT	data	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2009-datasets/data-sets-in-txt-format/INT_SCQ09_Dec11.zip
 2009	INT	data	https://www.oecd.org/content/dam/oecd/en/data/datasets/pisa/pisa-2009-datasets/data-sets-in-txt-format/INT_PAR09_DEC11.zip
