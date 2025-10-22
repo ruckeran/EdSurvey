@@ -41,8 +41,8 @@ dat_long2 <- dat_long %>%
   select(any_of(c("varName", "varLabel", "value", "valLabel", "missings")))
 
 ### 3. Preparing meta data and data for GADSdat
-varLabels <- data.frame(varName = dat_long2$varName,
-                        varLabel = dat_long2$varLabel,
+varLabels <- data.frame(varName = dat$variableName,
+                        varLabel = dat$Labels,
                         stringsAsFactors = FALSE)
 valLabels <- data.frame(varName = dat_long2$varName,
                         value = dat_long2$value,
