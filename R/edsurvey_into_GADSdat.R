@@ -51,7 +51,12 @@ valLabels <- data.frame(varName = dat_long2$varName,
                         stringsAsFactors = FALSE)
 
 vars <- pisa_list2$`2000`$dataList$Student$fileFormat$variableName # Saving variable names out of fileFormat
-df <- getData(pisa_list2$`2000`, varnames = vars, addAttributes = FALSE) # Reading in the actual data (before, they were accessed via a LaF connection)
+vars_unique <- unique(vars) # make varnames unique
+n <- length(vars_unique) # how many elements do we need for the data frame
+df <- as.data.frame(
+  setNames(replicate(n, character(0), simplify = FALSE), vars_unique),
+  stringsAsFactors = FALSE
+)
 
 gads <- import_raw(df = df, varLabels = varLabels, valLabels = valLabels)  # Creating GADSdat
 
