@@ -27,22 +27,23 @@ dat_long <- dat_wide |>
   separate(pair, into = c("code", "label"),
            sep = "=", fill = "right")
 
-# Renaming the columns for GADSdat
+# GADSdats expect specific variable names
 dat_long <- dat_long %>%
   rename(varName = variableName,
          varLabel = Labels,
          value   = code,
          valLabel = label)
 
-# Creating new missing tags (with the help of the variables dat_long$value and dat_long$missing)
-dat_long$missings <- mapply(function(val, miss_str) {
-  val_chr <- as.character(val) # Ensuring the incoming value is treated as a character string
-  if (is.na(val)) return(NA_character_) # If the value itself is missing -> NA
-  miss_vals <- unlist(strsplit(as.character(miss_str), ";")) # If semicolon exists, splitting into individual codes
+# Creating new missing tags
+setMissingtags <- function(val, miss_str) {
+  val_chr <- as.character(val)
+  if (is.na(val)) return(NA_character_) # if the value itself is missing -> NA
+  miss_vals <- unlist(strsplit(as.character(miss_str), ";")) # split semicolon-separated codes
   if (val_chr %in% miss_vals || val_chr %in% c("n", "r")) "miss" else "valid"
-}, dat_long$value, dat_long$missing, USE.NAMES = FALSE)
+}
 
-# Keeping only necessary columns for GADSdat
+dat_long$missings <- mapply(setMissingtags, dat_long$value, dat_long$missing, USE.NAMES = FALSE)
+
 dat_long2 <- dat_long %>%
   select(c("varName", "varLabel", "value", "valLabel", "missings"))
 
