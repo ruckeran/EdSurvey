@@ -59,16 +59,9 @@ valLabels <- data.frame(varName = dat_long2$varName,
                         missings = dat_long2$missings,
                         stringsAsFactors = FALSE)
 
-vars <- pisa_list2$`2000`$dataList$Student$fileFormat$variableName # Saving variable names out of fileFormat
-n <- length(vars_unique) # How many elements do we need for the data frame
-df <- as.data.frame(
-  setNames(replicate(n, character(0), simplify = FALSE), vars_unique),
-  stringsAsFactors = FALSE
-)
-
-# > df2 <- as.data.frame(lapply(vars_unique, function(x) character(0)))
-# > names(df2) <- vars_unique
-# > all.equal(df, df2)
+vars <- pisa_list2$`2000`$dataList$Student$fileFormat$variableName
+df <- as.data.frame(lapply(vars, function(x) character(0)))
+names(df) <- vars
 
 
 valLabels2 <- valLabels
@@ -78,4 +71,4 @@ table(valLabels$value[is.na(valLabels2$value)], valLabels2$value[is.na(valLabels
       useNA = "if")
 
 gads <- import_raw(df = df, varLabels = varLabels, valLabels = valLabels,
-                   checkVarNames = FALSE)  # Creating GADSdat
+                   checkVarNames = FALSE)
