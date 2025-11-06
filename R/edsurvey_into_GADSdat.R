@@ -6,7 +6,7 @@
 
 library(tidyr)
 library(dplyr)
-
+library(eatGADS)
 
 # Splitting labelValues at "^" ---------------------------------------------------------------------
 
@@ -50,25 +50,23 @@ dat_long2 <- dat_long %>%
 
 # Preparing meta data and data for GADSdat ---------------------------------------------------------
 
+n <- length(dat$variableName)
 varLabels <- data.frame(varName = dat$variableName,
                         varLabel = dat$Labels,
+                        format = rep(NA, n),
+                        display_width = rep(NA, n),
+                        labeled = rep(NA, n),
                         stringsAsFactors = FALSE)
 valLabels <- data.frame(varName = dat_long2$varName,
                         value = dat_long2$value,
                         valLabel = dat_long2$valLabel,
                         missings = dat_long2$missings,
                         stringsAsFactors = FALSE)
+labels <- merge(varLabels, valLabels, by = "varName", all.x = FALSE, sort = FALSE)
 
 vars <- pisa_list2$`2000`$dataList$Student$fileFormat$variableName
 df <- as.data.frame(lapply(vars, function(x) character(0)))
 names(df) <- vars
 
 
-valLabels2 <- valLabels
-valLabels2$value <- as.numeric(valLabels2$value)
-## error hunt following
-table(valLabels$value[is.na(valLabels2$value)], valLabels2$value[is.na(valLabels2$value)],
-      useNA = "if")
-
-gads <- import_raw(df = df, varLabels = varLabels, valLabels = valLabels,
-                   checkVarNames = FALSE)
+gads <- eatGADS:::new_GADSdat(df, labels)
