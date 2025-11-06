@@ -44,9 +44,6 @@ setMissingtags <- function(val, miss_str) {
 
 dat_long$missings <- mapply(setMissingtags, dat_long$value, dat_long$missing, USE.NAMES = FALSE)
 
-dat_long2 <- dat_long %>%
-  select(c("varName", "varLabel", "value", "valLabel", "missings"))
-
 
 # Preparing meta data and data for GADSdat ---------------------------------------------------------
 
@@ -57,16 +54,15 @@ varLabels <- data.frame(varName = dat$variableName,
                         display_width = rep(NA, n),
                         labeled = rep(NA, n),
                         stringsAsFactors = FALSE)
-valLabels <- data.frame(varName = dat_long2$varName,
-                        value = dat_long2$value,
-                        valLabel = dat_long2$valLabel,
-                        missings = dat_long2$missings,
+valLabels <- data.frame(varName = dat_long$varName,
+                        value = dat_long$value,
+                        valLabel = dat_long$valLabel,
+                        missings = dat_long$missings,
                         stringsAsFactors = FALSE)
 labels <- merge(varLabels, valLabels, by = "varName", all.x = FALSE, sort = FALSE)
 
 vars <- pisa_list2$`2000`$dataList$Student$fileFormat$variableName
 df <- as.data.frame(lapply(vars, function(x) character(0)))
 names(df) <- vars
-
 
 gads <- eatGADS:::new_GADSdat(df, labels)
