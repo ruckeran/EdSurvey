@@ -7,11 +7,12 @@
 library(tidyr)
 library(dplyr)
 library(eatGADS)
+library(stringr)
 
 # Splitting labelValues at "^" ---------------------------------------------------------------------
 
 dat <- pisa_list2$`2000`$dataList$Student$fileFormat
-max_parts <- max(sapply(strsplit(dat$labelValues, "\\^"), length), na.rm = TRUE) # Determine the number of parts per line
+max_parts <- max(str_count(dat$labelValues, "\\^"), na.rm = TRUE) + 1 # Determine the number of parts per line
 into <- paste0("val", seq_len(max_parts)) # Generate and separate column names
 dat_wide <- tidyr::separate(dat, labelValues, into = into, sep = "\\^", fill = "right") %>%
   select(!(Start:multiplier) & !(labelled) & !(Type:Width2))

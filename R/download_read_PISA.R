@@ -5,9 +5,7 @@
 # Packages needed ----------------------------------------------------------------------------------
 
 library(readr)
-library(eatGADS)
-library(devtools)
-devtools::load_all()
+library(EdSurvey)
 
 # Downloading data with adjusted EdSurvey function -------------------------------------------------
 
