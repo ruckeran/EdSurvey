@@ -13,12 +13,6 @@ downloadPISA(root = "C:/Users/ruckeran/Downloads", years = c(2000, 2003, 2006, 2
 
 # Reading data one by one because didn't work in one line of code ---------------------------------
 
-# readPISA(path = c("C:/Users/ruckeran/Downloads/PISA/2000",
-#                   "C:/Users/ruckeran/Downloads/PISA/2003",
-#                   "C:/Users/ruckeran/Downloads/PISA/2006",
-#                   "C:/Users/ruckeran/Downloads/PISA/2009",
-#                   "C:/Users/ruckeran/Downloads/PISA/2012"), countries = "deu", cognitive = "score", forceReread = TRUE)
-
 years <- c("2000","2003","2006","2009","2012")
 base  <- "C:/Users/ruckeran/Downloads/PISA"
 
